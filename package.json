@@ -12,7 +12,8 @@
     "sources": "uv run --project ml sodhnus sources",
     "crawl": "uv run --project ml sodhnus crawl",
     "evals": "tsx --import ./evals/assets.mjs evals/run.ts",
-    "ml:serve": "uv run --project ml sodhnus serve"
+    "ml:serve": "uv run --project ml sodhnus serve",
+    "test:ml": "uv run --project ml pytest ml/tests -q"
   },
   "dependencies": {
     "motion": "^13.4.6",

@@ -6,6 +6,7 @@ import psycopg
 from .models import embed, reranker, to_pgvector
 
 CANDIDATES = 30
+RERANK = 20
 RRF_K = 60
 PER_DOCUMENT = 3
 
@@ -32,7 +33,7 @@ def search(conn: psycopg.Connection, phrasings: list[str], k: int = 8) -> list[d
     if not scores:
         return []
 
-    top = sorted(scores, key=scores.get, reverse=True)[: CANDIDATES + 10]
+    top = sorted(scores, key=scores.get, reverse=True)[:RERANK]
     rows = conn.execute(
         """
         select c.id, c.text, d.url, d.title, s.office, s.office_ne, s.domain, d.fetched_at, d.published_at

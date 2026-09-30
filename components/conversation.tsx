@@ -136,8 +136,8 @@ function AnswerView({ answer }: { answer: Answer }) {
       {answer.documents.length > 0 && (
         <Section title={answer.lang === "en" ? "What to bring" : "चाहिने कागजात"}>
           <ul className="space-y-2.5">
-            {answer.documents.map((item) => (
-              <li key={item} className="flex gap-3">
+            {answer.documents.map((item, i) => (
+              <li key={i} className="flex gap-3">
                 <icons.check className="mt-1 size-4 shrink-0 text-blue" />
                 <span>{item}</span>
               </li>
@@ -150,7 +150,7 @@ function AnswerView({ answer }: { answer: Answer }) {
         <Section title={answer.lang === "en" ? "Steps" : "प्रक्रिया"}>
           <ol className="space-y-3">
             {answer.steps.map((step, i) => (
-              <li key={step} className="flex gap-3">
+              <li key={i} className="flex gap-3">
                 <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sky text-[13px] font-medium text-blue">
                   {i + 1}
                 </span>
@@ -209,7 +209,8 @@ function SourceLink({ source, lang }: { source: Source; lang: Lang }) {
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{source.title}</p>
           <p className="mt-0.5 text-[13px] text-ink-3">
-            {source.office} · {new URL(source.url).hostname} · {checked}
+            {source.title !== source.office && `${source.office} · `}
+            {new URL(source.url).hostname} · {checked}
           </p>
         </div>
         <icons.arrowUpRight className="mt-1 size-4 shrink-0 text-ink-3" />

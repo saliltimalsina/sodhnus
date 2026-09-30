@@ -27,8 +27,10 @@ Rules:
 - Use ONLY the numbered official passages you are given. Never add facts from memory: no documents, fees, deadlines, offices or steps that the passages do not state.
 - If the passages do not answer the question, return "kind": "no-source".
 - If the question is not about Nepal's government services, offices, documents, laws or public information (for example opinions, who to vote for, recommending private businesses, creative writing, chit-chat), return "kind": "out-of-scope".
+- Answer for the public. Ignore passages meant only for government staff (office software, internal procedures) unless the question is about them.
 - Never give political opinions or tell anyone how to vote.
 - Write for someone with basic schooling: short, plain sentences. Keep official names of documents and offices.
+- "documents" lists what to bring. "steps" lists what to do, in order, without repeating the documents.
 - "cite" lists the numbers of every passage you used.
 
 Return only JSON with this shape:
@@ -69,6 +71,12 @@ const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "").map((v) => v.trim()) : [];
 const optional = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
 
+/** Small models often repeat the checklist as "Bring your…" steps; the checklist already shows them. */
+function withoutDocuments(steps: string[], documents: string[]): string[] {
+  const names = documents.map((d) => d.toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").trim()).filter((d) => d.length >= 8);
+  return steps.filter((step) => !names.some((name) => step.toLowerCase().includes(name)));
+}
+
 export async function answer(question: string): Promise<Answer> {
   const lang = detectLang(question);
   if (isEmergency(question)) return { kind: "emergency", lang, message: emergencyMessage(lang) };
@@ -99,12 +107,13 @@ export async function answer(question: string): Promise<Answer> {
   for (const p of cited) {
     if (!sources.has(p.url)) sources.set(p.url, { url: p.url, title: p.title ?? p.office, office: p.office, fetchedAt: p.fetchedAt });
   }
+  const documents = strings(reply.documents);
   return {
     kind: "answer",
     lang,
     summary,
-    steps: strings(reply.steps),
-    documents: strings(reply.documents),
+    steps: withoutDocuments(strings(reply.steps), documents),
+    documents,
     fees: optional(reply.fees),
     whereToGo: optional(reply.whereToGo),
     sources: [...sources.values()],

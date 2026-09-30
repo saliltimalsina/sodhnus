@@ -18,7 +18,7 @@ import trafilatura
 import truststore
 from pypdf import PdfReader
 
-from .text import chunk, detect_lang, find_bs_date
+from .text import broken_devanagari, chunk, detect_lang, find_bs_date
 
 USER_AGENT = "SodhnusBot/0.1 (independent public-information service for Nepal)"
 MAX_BYTES = 15 * 1024 * 1024
@@ -102,6 +102,8 @@ def read_pdf(data: bytes) -> tuple[str, str]:
     text = "\n".join(page.extract_text() or "" for page in reader.pages[:60])
     if len(text.strip()) < MIN_CHARS:
         raise Skip("scanned-pdf", f"{len(reader.pages)} pages")
+    if broken_devanagari(text):
+        raise Skip("broken-text", "Devanagari text layer maps to the wrong characters")
     title = (reader.metadata.title if reader.metadata else None) or next(l.strip() for l in text.split("\n") if l.strip())
     return title[:200], text
 
@@ -132,6 +134,17 @@ def extract(url: str, response: httpx.Response) -> Page:
         raise Skip("too-short", f"{len(text)} chars")
     metadata = trafilatura.extract_metadata(html, default_url=url)
     return Page(url, metadata.title if metadata else None, text, "html")
+
+
+def http_client(max_connections: int = 10) -> httpx.AsyncClient:
+    # The system trust store completes the certificate chains several .gov.np servers leave out.
+    return httpx.AsyncClient(
+        verify=truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+        follow_redirects=True,
+        timeout=httpx.Timeout(30, connect=20),
+        headers={"User-Agent": USER_AGENT},
+        limits=httpx.Limits(max_connections=max_connections),
+    )
 
 
 async def fetch(client: httpx.AsyncClient, url: str) -> httpx.Response:
@@ -200,7 +213,13 @@ async def store(conn: psycopg.AsyncConnection, source_id: int, page: Page) -> st
     return "changed" if existing else "new"
 
 
+# Reasons that describe the file itself, so any text stored for it earlier is wrong or unreadable.
+UNREADABLE = ("scanned-pdf", "broken-text", "legacy-font")
+
+
 async def skip(conn: psycopg.AsyncConnection, source_id: int, url: str, reason: str, detail: str) -> None:
+    if reason in UNREADABLE:
+        await conn.execute("delete from documents where url = %s", (url,))
     await conn.execute(
         """
         insert into skipped_urls (url, source_id, reason, detail) values (%s, %s, %s, %s)
@@ -305,12 +324,7 @@ async def crawl(database_url: str, domains: list[str] | None, max_pages: int, de
         print("Nothing is due for a crawl (use --force to crawl anyway)")
         return
 
-    # The system trust store completes the certificate chains several .gov.np servers leave out.
-    tls = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    limits = httpx.Limits(max_connections=len(sources) * 2)
-    async with httpx.AsyncClient(
-        verify=tls, follow_redirects=True, timeout=httpx.Timeout(30, connect=20), headers={"User-Agent": USER_AGENT}, limits=limits
-    ) as client:
+    async with http_client(max_connections=len(sources) * 2) as client:
 
         async def run(source: dict) -> None:
             counts = await crawl_source(database_url, client, source, max_pages, delay)

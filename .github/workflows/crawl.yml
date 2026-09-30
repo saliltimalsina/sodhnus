@@ -1,4 +1,4 @@
-# Keeps the database fresh for free: recrawls sites that are due, then embeds new passages.
+# Keeps the database fresh for free: recrawls sites that are due, reads scanned PDFs, embeds new passages.
 # Needs the repository secret DATABASE_URL (e.g. a Neon free-tier Postgres with pgvector).
 name: Crawl official sites
 
@@ -18,8 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client tesseract-ocr tesseract-ocr-nep
       - run: sh scripts/migrate.sh
       - run: uv run --project ml sodhnus sources
       - run: uv run --project ml sodhnus crawl
+      - run: uv run --project ml sodhnus ocr
       - run: uv run --project ml sodhnus embed

@@ -44,8 +44,9 @@ createdb sodhnus
 npm run db:migrate
 npm run sources            # load ml/sources.yaml
 npm run crawl              # crawl sites that are due (150 pages each by default)
+npm run ml -- ocr          # read scanned PDFs (brew install tesseract, plus nep.traineddata from tessdata_best)
 npm run ml -- embed        # embed new passages
-ollama pull gemma3:12b
+ollama pull gemma3:12b && ollama create sodhnus-gemma -f ml/ollama/Modelfile
 
 npm run ml:serve           # search API on :8765 (keep running)
 npm run dev                # the site on :3000
@@ -67,8 +68,8 @@ promise on the page.
 
 ## Known gaps
 
-- Scanned PDFs need OCR (Tesseract with Nepali data) and Preeti/Kantipur PDFs need a legacy-font converter;
-  both are recorded in `skipped_urls` for later. The only converter found so far, `npttf2utf`, is GPL-3.0.
+- Preeti/Kantipur PDFs need a legacy-font converter; they are recorded in `skipped_urls`. The only converter
+  found so far, `npttf2utf`, is GPL-3.0, so using it is a licensing decision. OCR only reads the first 8 pages.
 - JavaScript-only sites (psc.gov.np) need a headless browser.
 - Laya (a free decision model) scored 8/11 zero-shot on routing questions; it needs fine-tuning on our data
   before it can decide anything users see.

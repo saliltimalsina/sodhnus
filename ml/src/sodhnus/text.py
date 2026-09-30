@@ -8,6 +8,9 @@ import nepali_datetime
 DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 LATIN = re.compile(r"[A-Za-z]")
 NEPALI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+# Sequences that cannot occur in real Devanagari: a virama or vowel sign followed by another vowel sign.
+# PDFs with broken font mappings produce them constantly ("प्रयोगकर्ाा" for "प्रयोगकर्ता").
+IMPOSSIBLE = re.compile(r"[\u093E-\u094D][\u093E-\u094C]")
 # Bikram Sambat years 2060-2099 (AD 2003-2043), written 2083-06-14, 2083/6/14 or २०८३.०६.१४.
 BS_DATE = re.compile(r"(20[6-9]\d)\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})")
 
@@ -19,6 +22,12 @@ def detect_lang(text: str) -> str:
         return "mixed"
     share = devanagari / (devanagari + latin)
     return "ne" if share > 0.7 else "en" if share < 0.3 else "mixed"
+
+
+def broken_devanagari(text: str) -> bool:
+    """True when a text layer is garbled enough that OCR will read the document better."""
+    letters = len(DEVANAGARI.findall(text))
+    return letters >= 200 and len(IMPOSSIBLE.findall(text)) / letters > 0.005
 
 
 def find_bs_date(text: str) -> tuple[str | None, datetime.date | None]:

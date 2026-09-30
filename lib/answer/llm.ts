@@ -5,7 +5,7 @@ import "server-only";
  * Groq and others) in production. Switching is a matter of three environment variables.
  */
 const BASE_URL = process.env.LLM_BASE_URL ?? "http://localhost:11434/v1";
-const MODEL = process.env.LLM_MODEL ?? "gemma3:12b";
+const MODEL = process.env.LLM_MODEL ?? "sodhnus-gemma";
 const API_KEY = process.env.LLM_API_KEY;
 
 type Message = { role: "system" | "user"; content: string };

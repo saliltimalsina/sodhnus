@@ -30,6 +30,8 @@ def main() -> None:
     crawl.add_argument("--delay", type=float, default=1.0, help="seconds between requests to one site")
     crawl.add_argument("--force", action="store_true", help="crawl even if not due")
     commands.add_parser("embed", help="embed chunks that have no embedding yet")
+    ocr = commands.add_parser("ocr", help="read scanned PDFs with Tesseract (needs the nep language data)")
+    ocr.add_argument("--limit", type=int, default=200, help="PDFs to process (default 200)")
     serve = commands.add_parser("serve", help="run the search API for the Next app")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765)
@@ -48,6 +50,10 @@ def main() -> None:
         from .embed import embed_pending
 
         embed_pending(database_url())
+    elif args.command == "ocr":
+        from .ocr import ocr_pending
+
+        asyncio.run(ocr_pending(database_url(), args.limit))
     elif args.command == "serve":
         import uvicorn
 

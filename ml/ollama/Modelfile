@@ -1,0 +1,4 @@
+# Gemma 3 12B with room for several official passages: Ollama's default 4,096-token context
+# silently cuts long Nepali prompts. Create with: ollama create sodhnus-gemma -f ml/ollama/Modelfile
+FROM gemma3:12b
+PARAMETER num_ctx 8192

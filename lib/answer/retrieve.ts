@@ -18,12 +18,12 @@ export type Passage = {
 };
 
 /** Search the crawled official pages. Put the clearest phrasing of the question first. */
-export async function retrieve(phrasings: string[], k = 6): Promise<Passage[]> {
+export async function retrieve(phrasings: string[], k = 5): Promise<Passage[]> {
   const response = await fetch(`${ML_URL}/search`, {
     method: "POST",
     headers: { "content-type": "application/json", ...(ML_TOKEN && { authorization: `Bearer ${ML_TOKEN}` }) },
     body: JSON.stringify({ phrasings, k }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(45_000),
   });
   if (!response.ok) throw new Error(`Search returned ${response.status}`);
   return (await response.json()).results;
