@@ -1,0 +1,74 @@
+# Official websites Sodhnus reads. Start with the offices behind the hero's example questions,
+# then grow toward every ministry, province and local government.
+# Every domain here answered over HTTPS on 2026-09-30.
+
+federal:
+  - domain: nepalpassport.gov.np
+    office: Department of Passports
+    office_ne: राहदानी विभाग
+  - domain: dotm.gov.np
+    office: Department of Transport Management
+    office_ne: यातायात व्यवस्था विभाग
+  - domain: ird.gov.np
+    office: Inland Revenue Department
+    office_ne: आन्तरिक राजस्व विभाग
+  - domain: dofe.gov.np
+    office: Department of Foreign Employment
+    office_ne: वैदेशिक रोजगार विभाग
+  - domain: hib.gov.np
+    office: Health Insurance Board
+    office_ne: स्वास्थ्य बीमा बोर्ड
+  - domain: election.gov.np
+    office: Election Commission
+    office_ne: निर्वाचन आयोग
+  - domain: dolma.gov.np
+    office: Department of Land Management and Archive
+    office_ne: भूमि व्यवस्थापन तथा अभिलेख विभाग
+  - domain: donidcr.gov.np
+    office: Department of National ID and Civil Registration
+    office_ne: राष्ट्रिय परिचयपत्र तथा पञ्जीकरण विभाग
+  - domain: neb.gov.np
+    office: National Examinations Board
+    office_ne: राष्ट्रिय परीक्षा बोर्ड
+  - domain: moest.gov.np
+    office: Ministry of Education, Science and Technology
+    office_ne: शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय
+  - domain: ocr.gov.np
+    office: Office of the Company Registrar
+    office_ne: कम्पनी रजिस्ट्रारको कार्यालय
+  - domain: immigration.gov.np
+    office: Department of Immigration
+    office_ne: अध्यागमन विभाग
+  - domain: ssf.gov.np
+    office: Social Security Fund
+    office_ne: सामाजिक सुरक्षा कोष
+  - domain: psc.gov.np
+    office: Public Service Commission
+    office_ne: लोक सेवा आयोग
+  - domain: dos.gov.np
+    office: Survey Department
+    office_ne: नापी विभाग
+  - domain: mohp.gov.np
+    office: Ministry of Health and Population
+    office_ne: स्वास्थ्य तथा जनसंख्या मन्त्रालय
+  - domain: mofaga.gov.np
+    office: Ministry of Federal Affairs and General Administration
+    office_ne: संघीय मामिला तथा सामान्य प्रशासन मन्त्रालय
+  - domain: lawcommission.gov.np
+    office: Nepal Law Commission
+    office_ne: नेपाल कानून आयोग
+    recrawl_hours: 720
+
+local:
+  - domain: kathmandu.gov.np
+    office: Kathmandu Metropolitan City
+    office_ne: काठमाडौं महानगरपालिका
+  - domain: lalitpurmun.gov.np
+    office: Lalitpur Metropolitan City
+    office_ne: ललितपुर महानगरपालिका
+  - domain: pokharamun.gov.np
+    office: Pokhara Metropolitan City
+    office_ne: पोखरा महानगरपालिका
+  - domain: bharatpurmun.gov.np
+    office: Bharatpur Metropolitan City
+    office_ne: भरतपुर महानगरपालिका

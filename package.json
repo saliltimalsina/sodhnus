@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "sh scripts/migrate.sh",
+    "ingest:sources": "uv run --project ingest sodhnus-ingest sources"
   },
   "dependencies": {
     "motion": "^13.4.6",
