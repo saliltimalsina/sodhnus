@@ -17,7 +17,7 @@ export type Passage = {
   score: number;
 };
 
-/** Search the crawled official pages. Put the clearest phrasing of the question first. */
+/** Search the crawled official pages with one or more phrasings of the same question. */
 export async function retrieve(phrasings: string[], k = 5): Promise<Passage[]> {
   const response = await fetch(`${ML_URL}/search`, {
     method: "POST",

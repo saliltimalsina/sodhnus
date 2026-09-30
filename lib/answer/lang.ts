@@ -8,7 +8,9 @@ const ROMAN_NEPALI = new Set(
     "dine dinu chahincha chahinchha chaiyo paincha painchha parcha parchha sakincha aauchha aaucha banaune " +
     "lekhaune bhayo mero hamro tapai tapailai malai darta nagarikta janma bihe jagga namsari naksa pass bhatta " +
     "briddha sifaris wada shram swikriti baideshik rojgar matdata namawali pasal swasthya bima nabikaran " +
-    "rahadani lagi apply renew naam kagaj kagajat sulka"
+    "rahadani lagi apply renew naam kagaj kagajat sulka ghar gaun sahar jilla aago badhi pahiro " +
+    "lagyo paryo pasyo aayo gayo garyo bhaneko chhaina chahiyo pauna paune milcha milchha " +
+    "hajur dai didi bua aama chora chori shrimati shriman"
   ).split(" "),
 );
 

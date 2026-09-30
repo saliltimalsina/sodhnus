@@ -36,18 +36,28 @@ Rules:
 Return only JSON with this shape:
 {"kind": "answer" | "no-source" | "out-of-scope", "summary": string, "steps": string[], "documents": string[], "fees": string | null, "whereToGo": string | null, "cite": number[]}`;
 
-/** Roman Nepali is searched better in Devanagari, so ask the model to transliterate it first. */
-async function toDevanagari(question: string): Promise<string | null> {
+/**
+ * The same question in the other script or language. The reranker scores a question poorly against
+ * passages in another language, and most official pages are in Nepali, so every question is searched
+ * both ways: Roman Nepali becomes Devanagari, English becomes Nepali, Nepali becomes English.
+ */
+async function otherPhrasing(question: string, lang: Lang): Promise<string | null> {
+  const instruction = {
+    roman: "Convert this Roman Nepali into Nepali in Devanagari script.",
+    en: "Translate this question into Nepali in Devanagari script.",
+    ne: "Translate this Nepali question into English.",
+  }[lang];
   try {
     const text = await complete(
       [
-        { role: "system", content: "Convert Roman Nepali to Nepali in Devanagari script. Reply with the converted text only." },
+        { role: "system", content: `${instruction} Reply with the result only.` },
         { role: "user", content: question },
       ],
       { maxTokens: 200 },
     );
     const line = text.trim().split("\n")[0];
-    return /[ऀ-ॿ]/.test(line) ? line : null;
+    const devanagari = /[\u0900-\u097F]/.test(line);
+    return line && (lang === "ne" ? !devanagari : devanagari) ? line : null;
   } catch {
     return null;
   }
@@ -60,7 +70,7 @@ function tryOffices(passages: Passage[]) {
 }
 
 function prompt(question: string, lang: Lang, passages: Passage[]): string {
-  const language = lang === "en" ? "English" : "Nepali, in Devanagari script";
+  const language = lang === "en" ? "English" : "Nepali, in Devanagari script, in every field, even though the passages or question may use English";
   const numbered = passages
     .map((p, i) => `[${i + 1}] ${p.office} — ${p.title ?? p.url}\n${p.url}\n${p.text}`)
     .join("\n\n");
@@ -81,13 +91,15 @@ export async function answer(question: string): Promise<Answer> {
   const lang = detectLang(question);
   if (isEmergency(question)) return { kind: "emergency", lang, message: emergencyMessage(lang) };
 
-  const devanagari = lang === "roman" ? await toDevanagari(question) : null;
-  const passages = await retrieve(devanagari ? [devanagari, question] : [question]);
+  const other = await otherPhrasing(question, lang);
+  // Roman Nepali is clearest in Devanagari, so that phrasing leads and is what the model answers.
+  const asked = lang === "roman" && other ? other : question;
+  const passages = await retrieve(other ? [asked, lang === "roman" ? question : other] : [question]);
   const relevant = passages.filter((p) => p.score >= MIN_RELEVANCE);
 
   let reply: Record<string, unknown> = {};
   try {
-    reply = JSON.parse(await complete([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(question, lang, relevant) }], { json: true }));
+    reply = JSON.parse(await complete([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(asked, lang, relevant) }], { json: true }));
   } catch {
     // An unreadable reply is treated like no answer: say so rather than show something unchecked.
   }

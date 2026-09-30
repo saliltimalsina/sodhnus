@@ -1,5 +1,6 @@
 """The open models Sodhnus runs locally: BGE-M3 for embeddings and bge-reranker-v2-m3 for reranking."""
 
+import threading
 from functools import cache
 
 import torch
@@ -7,6 +8,9 @@ from sentence_transformers import CrossEncoder, SentenceTransformer
 
 EMBEDDING_MODEL = "BAAI/bge-m3"
 RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
+# GPU backends (Apple's MPS in particular) crash when two threads run a model at once, and the
+# web server handles requests on a thread pool, so every model call goes through this lock.
+GPU = threading.Lock()
 
 
 def device() -> str:
@@ -28,7 +32,13 @@ def reranker() -> CrossEncoder:
 
 
 def embed(texts: list[str], batch_size: int = 16) -> list[list[float]]:
-    return embedder().encode(texts, batch_size=batch_size, normalize_embeddings=True).tolist()
+    with GPU:
+        return embedder().encode(texts, batch_size=batch_size, normalize_embeddings=True).tolist()
+
+
+def rerank(query: str, passages: list[str]) -> list[float]:
+    with GPU:
+        return [float(s) for s in reranker().predict([(query, p) for p in passages])]
 
 
 def to_pgvector(vector: list[float]) -> str:

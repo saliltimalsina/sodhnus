@@ -3,7 +3,7 @@ reciprocal rank fusion, then reranked with a cross-encoder."""
 
 import psycopg
 
-from .models import embed, reranker, to_pgvector
+from .models import embed, rerank, to_pgvector
 
 CANDIDATES = 30
 RERANK = 20
@@ -12,8 +12,7 @@ PER_DOCUMENT = 3
 
 
 def search(conn: psycopg.Connection, phrasings: list[str], k: int = 8) -> list[dict]:
-    """`phrasings` are the same question in different forms (as typed, in Devanagari, in English).
-    The first is used for reranking, so callers should put the clearest one first."""
+    """`phrasings` are the same question in different forms (as typed, in Devanagari, in English)."""
     scores: dict[int, float] = {}
 
     def fuse(ids: list[int]) -> None:
@@ -42,10 +41,13 @@ def search(conn: psycopg.Connection, phrasings: list[str], k: int = 8) -> list[d
         """,
         (top,),
     ).fetchall()
-    rerank = reranker().predict([(phrasings[0], row[1]) for row in rows])
+    # A passage counts as relevant if any phrasing of the question matches it well; this lets a
+    # Nepali passage answer an English question.
+    texts = [row[1] for row in rows]
+    scores_by_row = [max(scores) for scores in zip(*(rerank(p, texts) for p in phrasings))]
 
     results, per_document = [], {}
-    for row, score in sorted(zip(rows, rerank), key=lambda pair: pair[1], reverse=True):
+    for row, score in sorted(zip(rows, scores_by_row), key=lambda pair: pair[1], reverse=True):
         chunk_id, text, url, title, office, office_ne, domain, fetched_at, published_at = row
         if per_document.get(url, 0) >= PER_DOCUMENT:
             continue
