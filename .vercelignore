@@ -1,0 +1,6 @@
+# Only the Next.js site deploys to Vercel; the search service, crawler and evals run elsewhere.
+ml/
+db/
+scripts/
+evals/
+.github/
