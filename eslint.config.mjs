@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Python service and its virtualenv.
+    "ml/**",
   ]),
 ]);
 

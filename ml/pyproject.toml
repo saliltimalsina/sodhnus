@@ -1,0 +1,35 @@
+[project]
+name = "sodhnus"
+version = "0.1.0"
+description = "Crawling, embeddings and decisions for Sodhnus"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142",
+    "httpx>=0.28",
+    "nepali-datetime>=1.0.8",
+    "psycopg[binary]>=3.3.6",
+    "pypdf>=6.19",
+    "python-dotenv>=1.2.3",
+    "pyyaml>=6.0.3",
+    "sentence-transformers>=6.1",
+    "torch>=2.14",
+    "trafilatura>=2.2",
+    "truststore>=0.10.4",
+    "uvicorn>=0.38",
+]
+
+[project.scripts]
+sodhnus = "sodhnus.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+# Linux (Docker, CI) gets the CPU-only PyTorch build instead of the multi-gigabyte CUDA one.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

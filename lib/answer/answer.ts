@@ -1,0 +1,112 @@
+import "server-only";
+import { emergencyMessage, isEmergency } from "./emergency";
+import { detectLang } from "./lang";
+import { complete } from "./llm";
+import { retrieve, type Passage } from "./retrieve";
+import type { Answer, Lang, Source } from "./types";
+
+/** Below this reranker score, the best passage is not about the question. Tuned on evals/golden.ts. */
+const MIN_RELEVANCE = 0.05;
+
+const MESSAGES = {
+  "no-source": {
+    en: "Sodhnus couldn’t find this on the official websites it reads, so it won’t guess. These offices may know:",
+    ne: "सोध्नुस्ले पढ्ने सरकारी वेबसाइटहरूमा यो जानकारी भेटिएन, त्यसैले अनुमान गरिँदैन। यी कार्यालयहरूले जानकारी दिन सक्छन्:",
+  },
+  "out-of-scope": {
+    en: "Sodhnus only answers questions about government services in Nepal, using official sources.",
+    ne: "सोध्नुस्ले सरकारी सेवासम्बन्धी प्रश्नको मात्र आधिकारिक स्रोतबाट जवाफ दिन्छ।",
+  },
+};
+
+const message = (kind: keyof typeof MESSAGES, lang: Lang) => MESSAGES[kind][lang === "en" ? "en" : "ne"];
+
+const SYSTEM = `You are Sodhnus, an independent service that explains Nepal government procedures in plain words. You are not the government.
+
+Rules:
+- Use ONLY the numbered official passages you are given. Never add facts from memory: no documents, fees, deadlines, offices or steps that the passages do not state.
+- If the passages do not answer the question, return "kind": "no-source".
+- If the question is not about Nepal's government services, offices, documents, laws or public information (for example opinions, who to vote for, recommending private businesses, creative writing, chit-chat), return "kind": "out-of-scope".
+- Never give political opinions or tell anyone how to vote.
+- Write for someone with basic schooling: short, plain sentences. Keep official names of documents and offices.
+- "cite" lists the numbers of every passage you used.
+
+Return only JSON with this shape:
+{"kind": "answer" | "no-source" | "out-of-scope", "summary": string, "steps": string[], "documents": string[], "fees": string | null, "whereToGo": string | null, "cite": number[]}`;
+
+/** Roman Nepali is searched better in Devanagari, so ask the model to transliterate it first. */
+async function toDevanagari(question: string): Promise<string | null> {
+  try {
+    const text = await complete(
+      [
+        { role: "system", content: "Convert Roman Nepali to Nepali in Devanagari script. Reply with the converted text only." },
+        { role: "user", content: question },
+      ],
+      { maxTokens: 200 },
+    );
+    const line = text.trim().split("\n")[0];
+    return /[ऀ-ॿ]/.test(line) ? line : null;
+  } catch {
+    return null;
+  }
+}
+
+function tryOffices(passages: Passage[]) {
+  const seen = new Map<string, { name: string; url: string }>();
+  for (const p of passages) if (!seen.has(p.domain)) seen.set(p.domain, { name: p.office, url: `https://${p.domain}/` });
+  return [...seen.values()].slice(0, 3);
+}
+
+function prompt(question: string, lang: Lang, passages: Passage[]): string {
+  const language = lang === "en" ? "English" : "Nepali, in Devanagari script";
+  const numbered = passages
+    .map((p, i) => `[${i + 1}] ${p.office} — ${p.title ?? p.url}\n${p.url}\n${p.text}`)
+    .join("\n\n");
+  return `Official passages:\n\n${numbered}\n\nQuestion: ${question}\n\nAnswer in ${language}.`;
+}
+
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "").map((v) => v.trim()) : [];
+const optional = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
+
+export async function answer(question: string): Promise<Answer> {
+  const lang = detectLang(question);
+  if (isEmergency(question)) return { kind: "emergency", lang, message: emergencyMessage(lang) };
+
+  const devanagari = lang === "roman" ? await toDevanagari(question) : null;
+  const passages = await retrieve(devanagari ? [devanagari, question] : [question]);
+  const relevant = passages.filter((p) => p.score >= MIN_RELEVANCE);
+
+  let reply: Record<string, unknown> = {};
+  try {
+    reply = JSON.parse(await complete([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(question, lang, relevant) }], { json: true }));
+  } catch {
+    // An unreadable reply is treated like no answer: say so rather than show something unchecked.
+  }
+
+  if (reply.kind === "out-of-scope") return { kind: "out-of-scope", lang, message: message("out-of-scope", lang) };
+
+  // Every answer must rest on passages that were actually given; otherwise it is not shown.
+  const cited = [...new Set(Array.isArray(reply.cite) ? reply.cite : [])]
+    .filter((n): n is number => Number.isInteger(n) && n >= 1 && n <= relevant.length)
+    .map((n) => relevant[n - 1]);
+  const summary = optional(reply.summary);
+  if (reply.kind !== "answer" || !summary || cited.length === 0) {
+    return { kind: "no-source", lang, message: message("no-source", lang), tryOffices: tryOffices(passages) };
+  }
+
+  const sources = new Map<string, Source>();
+  for (const p of cited) {
+    if (!sources.has(p.url)) sources.set(p.url, { url: p.url, title: p.title ?? p.office, office: p.office, fetchedAt: p.fetchedAt });
+  }
+  return {
+    kind: "answer",
+    lang,
+    summary,
+    steps: strings(reply.steps),
+    documents: strings(reply.documents),
+    fees: optional(reply.fees),
+    whereToGo: optional(reply.whereToGo),
+    sources: [...sources.values()],
+  };
+}
